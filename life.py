@@ -30,7 +30,7 @@ class Grid:
     
     def __str__(self):
         """Retorna a representação em forma de string da grade"""
-        return "\n".join([" ".join([m_state[v] for v in row]) for row in self._cells])
+        return "\n".join(["".join([m_state[v] for v in row]) for row in self._cells])
 
     def __getitem__(self, key):
         """Retorna o estado da célula na linha row e coluna col"""
@@ -82,8 +82,8 @@ class Grid:
 # =========================== Tests ====================================
 class Demo:
     def __init__(self):
-        self.ncurses_config()
         self.simulation_config()
+        self.ncurses_config()
 
     def ncurses_config(self):
         self.stdscr = curses.initscr()
@@ -92,16 +92,22 @@ class Demo:
         curses.noecho()
         curses.cbreak()
         curses.curs_set(0)
+        self.pad = curses.newpad(self.grid.height+3, self.grid.width+20)
+        self.calc_drawing_area()
 
-    def simulation_config(self):
-        self.grid = Grid(30, 20, random_fill=True)
+    def calc_drawing_area(self):
+        self.maxrow, self.maxcol = self.stdscr.getmaxyx()
+
+    def simulation_config(self): 
+        self.grid = Grid(20, 30, random_fill=True)
         self.paused = False
         self.running = True
 
     def draw(self):
-        self.stdscr.clear()
-        self.stdscr.addstr(str(self.grid))
-        self.stdscr.addstr(f"\nquit [q]    reset [r]   {'play' if self.paused else 'pause'} [p]   step [s]")
+        self.pad.clear()
+        self.pad.addstr(str(self.grid))
+        self.pad.addstr(f"\nquit [q]    reset [r]   {'play' if self.paused else 'pause'} [p]   step [s]")
+        self.pad.refresh(0, 0, 0, 0, self.maxrow-4, self.maxcol-5)
         self.stdscr.refresh()
 
     def update(self):
@@ -115,18 +121,20 @@ class Demo:
             if key == ord("q"):
                 self.running = False
             elif key == ord("r"):
-                self.grid = Grid(30, 20, random_fill=True)
+                self.grid = Grid(20, 30, random_fill=True)
             elif key == ord("p"):
                 self.paused = not self.paused
             elif key == ord("s"):
                 self.paused = True
                 self.grid.step()
+            elif key == curses.KEY_RESIZE:
+                self.calc_drawing_area()
 
     def run(self):
         while self.running:
+            self.process_input()
             self.draw()
             self.update()
-            self.process_input()
 
         curses.endwin()
 
